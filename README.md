@@ -11,13 +11,6 @@
 
 用途：为 Ubuntu 切换 APT 镜像源（阿里云 / 清华），并执行 `apt update`。
 
-功能行为：
-- 自动检测系统是否为 Ubuntu
-- 交互式选择镜像源
-- 备份 `/etc/apt/sources.list` 到 `/etc/apt/sources.list.bak`
-- 写入 `/etc/apt/sources.list.d/ubuntu.sources`
-- 执行 `apt update`
-
 ## 🛠️ 如何使用 build.sh
 
 统一调用方式：
