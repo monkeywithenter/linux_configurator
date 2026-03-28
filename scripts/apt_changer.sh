@@ -95,6 +95,21 @@ strip_generated_block() {
   ' "${source_file}" > "${target_file}"
 }
 
+ensure_blank_line_before_generated_block() {
+  local target_file="$1"
+
+  [[ -f "${target_file}" ]] || return 0
+
+  # 空文件直接写生成块，不需要额外空白行。
+  [[ -s "${target_file}" ]] || return 0
+
+  if tail -n 1 "${target_file}" | grep -Eq '^[[:space:]]*$'; then
+    return 0
+  fi
+
+  printf '\n' >> "${target_file}"
+}
+
 write_ubuntu_sources() (
   local codename="$1"
   local mirror="$2"
@@ -123,8 +138,9 @@ write_ubuntu_sources() (
     : > "${UBUNTU_SOURCES}"
   fi
 
-  cat >> "${UBUNTU_SOURCES}" <<EOF
+  ensure_blank_line_before_generated_block "${UBUNTU_SOURCES}"
 
+  cat >> "${UBUNTU_SOURCES}" <<EOF
 # BEGIN APT_CHANGER GENERATED
 Types: deb
 URIs: ${mirror}
@@ -171,8 +187,9 @@ write_legacy_sources_list() (
 
   cat "${tmp_processed}" > "${SOURCES_LIST}"
 
-  cat >> "${SOURCES_LIST}" <<EOF
+  ensure_blank_line_before_generated_block "${SOURCES_LIST}"
 
+  cat >> "${SOURCES_LIST}" <<EOF
 # BEGIN APT_CHANGER GENERATED
 deb ${mirror} ${codename} main restricted universe multiverse
 deb-src ${mirror} ${codename} main restricted universe multiverse
