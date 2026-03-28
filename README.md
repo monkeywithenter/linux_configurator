@@ -20,9 +20,7 @@
 ```bash
 bash build.sh <script_name> [args...]
 ```
-
-参数说明：
-- `<script_name>`：`./scripts` 下脚本文件名（不含 `.sh` 后缀）
+`<script_name>`对应`./scripts`文件夹下的脚本文件名（不含 `.sh` 后缀）
 
 查看当前可用功能：
 
