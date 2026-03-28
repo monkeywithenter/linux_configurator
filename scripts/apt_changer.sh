@@ -129,6 +129,60 @@ EOF
   print_info "已写入 ${UBUNTU_SOURCES}"
 }
 
+write_legacy_sources_list() {
+  local codename="$1"
+  local mirror="$2"
+  local tmp_existing
+  local tmp_processed
+
+  if [[ ! -f "${SOURCES_LIST}" ]]; then
+    print_error "${SOURCES_LIST} 不存在，无法继续进行 Ubuntu ${codename} 的换源。"
+    exit 1
+  fi
+
+  tmp_existing="$(mktemp)"
+  tmp_processed="$(mktemp)"
+
+  # 去掉上一次脚本生成的配置块，避免重复追加。
+  awk '
+    /^# BEGIN APT_CHANGER GENERATED$/ { in_generated=1; next }
+    /^# END APT_CHANGER GENERATED$/   { in_generated=0; next }
+    !in_generated { print }
+  ' "${SOURCES_LIST}" > "${tmp_existing}"
+
+  # 仅注释 Ubuntu 官方源，保留第三方源与已有注释。
+  awk '
+    /^[[:space:]]*$/ { print; next }
+    /^[[:space:]]*#/ { print; next }
+    /^[[:space:]]*deb(-src)?[[:space:]]+/ {
+      if ($0 ~ /(archive|security|[A-Za-z0-9.-]+)\.ubuntu\.com\/ubuntu/ ||
+          $0 ~ /ports\.ubuntu\.com\/ubuntu-ports/) {
+        print "# " $0
+        next
+      }
+    }
+    { print }
+  ' "${tmp_existing}" > "${tmp_processed}"
+
+  cat "${tmp_processed}" > "${SOURCES_LIST}"
+
+  cat >> "${SOURCES_LIST}" <<EOF
+# BEGIN APT_CHANGER GENERATED
+deb ${mirror} ${codename} main restricted universe multiverse
+deb-src ${mirror} ${codename} main restricted universe multiverse
+deb ${mirror} ${codename}-updates main restricted universe multiverse
+deb-src ${mirror} ${codename}-updates main restricted universe multiverse
+deb ${mirror} ${codename}-backports main restricted universe multiverse
+deb-src ${mirror} ${codename}-backports main restricted universe multiverse
+deb ${mirror} ${codename}-security main restricted universe multiverse
+deb-src ${mirror} ${codename}-security main restricted universe multiverse
+# END APT_CHANGER GENERATED
+EOF
+
+  rm -f "${tmp_existing}" "${tmp_processed}"
+  print_info "已写入 ${SOURCES_LIST}"
+}
+
 main() {
   print_start "权限检查"
   require_root
@@ -148,7 +202,16 @@ main() {
   backup_sources_list
 
   print_start "镜像源配置写入"
-  write_ubuntu_sources "${codename}" "${mirror}"
+  case "${codename}" in
+    bionic|focal)
+      print_info "检测到 Ubuntu 18.04/20.04 系列，使用 ${SOURCES_LIST} 方式写入。"
+      write_legacy_sources_list "${codename}" "${mirror}"
+      ;;
+    *)
+      print_info "检测到 Ubuntu 22.04+ 系列，使用 ${UBUNTU_SOURCES} 方式写入。"
+      write_ubuntu_sources "${codename}" "${mirror}"
+      ;;
+  esac
 
   print_start "更新软件库"
   apt update
