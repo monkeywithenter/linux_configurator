@@ -124,6 +124,7 @@ write_ubuntu_sources() (
   fi
 
   cat >> "${UBUNTU_SOURCES}" <<EOF
+
 # BEGIN APT_CHANGER GENERATED
 Types: deb
 URIs: ${mirror}
@@ -171,6 +172,7 @@ write_legacy_sources_list() (
   cat "${tmp_processed}" > "${SOURCES_LIST}"
 
   cat >> "${SOURCES_LIST}" <<EOF
+
 # BEGIN APT_CHANGER GENERATED
 deb ${mirror} ${codename} main restricted universe multiverse
 deb-src ${mirror} ${codename} main restricted universe multiverse
