@@ -9,7 +9,9 @@
 
 ### `apt_changer`
 
-用途：为 Ubuntu 切换 APT 镜像源（阿里云 / 清华），并执行 `apt update`。
+用途：切换 Ubuntu APT 软件源为国内镜像源，加速 APT 软件以及依赖安装。
+- 支持版本: Ubuntu 18.04 / 20.04 / 22.04 / 24.04
+- 支持软件源: 阿里云 / 清华源
 
 ## 🛠️ 如何使用 build.sh
 
@@ -28,15 +30,7 @@ bash build.sh <script_name> [args...]
 bash build.sh --help
 ```
 
-## ✅ 快速开始示例
-
-执行 `apt_changer`：
-
-```bash
-sudo bash build.sh apt_changer
-```
-
 ## ⚠️ 使用注意事项
 
-- `apt_changer` 仅支持 Ubuntu 系统
+- `apt_changer` 目前仅支持 Ubuntu 系统
 - 涉及系统软件源修改，需使用 root 权限（建议 `sudo`）

@@ -13,7 +13,7 @@ readonly SIGNED_BY="/usr/share/keyrings/ubuntu-archive-keyring.gpg"
 
 require_root() {
   if [[ "${EUID}" -ne 0 ]]; then
-    print_error "需要 root 权限，请使用 sudo 运行：sudo ./build.sh apt_changer.sh"
+    print_error "需要 root 权限，请使用 sudo 运行：sudo ./build.sh apt_changer"
     exit 1
   fi
 }
@@ -30,7 +30,7 @@ detect_codename() {
   fi
 
   if [[ "${distro_id}" != "ubuntu" ]]; then
-    print_error "当前系统不是 Ubuntu（检测到 ID=${distro_id:-unknown}），脚本已退出。"
+    print_error "当前系统不是 Ubuntu (检测到 ID=${distro_id:-unknown})，脚本已退出。"
     exit 1
   fi
 
@@ -39,7 +39,7 @@ detect_codename() {
   fi
 
   if [[ -z "${codename}" ]]; then
-    print_error "无法自动识别 Ubuntu 发行版代号（VERSION_CODENAME/lsb_release 均失败）。"
+    print_error "无法自动识别 Ubuntu 发行版代号 (VERSION_CODENAME/lsb_release 均失败)。"
     exit 1
   fi
 
@@ -84,7 +84,18 @@ backup_sources_list() {
   fi
 }
 
-write_ubuntu_sources() {
+strip_generated_block() {
+  local source_file="$1"
+  local target_file="$2"
+
+  awk '
+    /^# BEGIN APT_CHANGER GENERATED$/ { in_generated=1; next }
+    /^# END APT_CHANGER GENERATED$/   { in_generated=0; next }
+    !in_generated { print }
+  ' "${source_file}" > "${target_file}"
+}
+
+write_ubuntu_sources() (
   local codename="$1"
   local mirror="$2"
   local suites
@@ -94,14 +105,11 @@ write_ubuntu_sources() {
 
   tmp_existing="$(mktemp)"
   tmp_commented="$(mktemp)"
+  trap 'rm -f "${tmp_existing}" "${tmp_commented}"' EXIT
 
   if [[ -f "${UBUNTU_SOURCES}" ]]; then
     # 去掉上一次脚本生成的配置块，避免重复追加。
-    awk '
-      /^# BEGIN APT_CHANGER GENERATED$/ { in_generated=1; next }
-      /^# END APT_CHANGER GENERATED$/   { in_generated=0; next }
-      !in_generated { print }
-    ' "${UBUNTU_SOURCES}" > "${tmp_existing}"
+    strip_generated_block "${UBUNTU_SOURCES}" "${tmp_existing}"
 
     # 将原有有效配置行注释掉，保留空行和已有注释。
     awk '
@@ -125,11 +133,10 @@ Signed-By: ${SIGNED_BY}
 # END APT_CHANGER GENERATED
 EOF
 
-  rm -f "${tmp_existing}" "${tmp_commented}"
   print_info "已写入 ${UBUNTU_SOURCES}"
-}
+)
 
-write_legacy_sources_list() {
+write_legacy_sources_list() (
   local codename="$1"
   local mirror="$2"
   local tmp_existing
@@ -142,13 +149,10 @@ write_legacy_sources_list() {
 
   tmp_existing="$(mktemp)"
   tmp_processed="$(mktemp)"
+  trap 'rm -f "${tmp_existing}" "${tmp_processed}"' EXIT
 
   # 去掉上一次脚本生成的配置块，避免重复追加。
-  awk '
-    /^# BEGIN APT_CHANGER GENERATED$/ { in_generated=1; next }
-    /^# END APT_CHANGER GENERATED$/   { in_generated=0; next }
-    !in_generated { print }
-  ' "${SOURCES_LIST}" > "${tmp_existing}"
+  strip_generated_block "${SOURCES_LIST}" "${tmp_existing}"
 
   # 仅注释 Ubuntu 官方源，保留第三方源与已有注释。
   awk '
@@ -179,9 +183,8 @@ deb-src ${mirror} ${codename}-security main restricted universe multiverse
 # END APT_CHANGER GENERATED
 EOF
 
-  rm -f "${tmp_existing}" "${tmp_processed}"
   print_info "已写入 ${SOURCES_LIST}"
-}
+)
 
 main() {
   print_start "权限检查"
@@ -207,9 +210,13 @@ main() {
       print_info "检测到 Ubuntu 18.04/20.04 系列，使用 ${SOURCES_LIST} 方式写入。"
       write_legacy_sources_list "${codename}" "${mirror}"
       ;;
-    *)
-      print_info "检测到 Ubuntu 22.04+ 系列，使用 ${UBUNTU_SOURCES} 方式写入。"
+    jammy|noble)
+      print_info "检测到 Ubuntu 22.04/24.04 系列，使用 ${UBUNTU_SOURCES} 方式写入。"
       write_ubuntu_sources "${codename}" "${mirror}"
+      ;;
+    *)
+      print_error "暂不支持 Ubuntu 发行版代号：${codename}（当前仅支持 bionic/focal/jammy/noble）。"
+      exit 1
       ;;
   esac
 

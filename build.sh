@@ -9,25 +9,23 @@ source "${SCRIPT_DIR}/utils/log.sh"
 
 usage() {
   cat <<EOF
-用法:
+🧾 用法:
   bash build.sh <script_name> [args...]
+  ./build.sh <script_name> [args...]
 
-说明:
+💡 说明:
   <script_name> 对应 ./scripts 下的脚本名称（不含 .sh 后缀）
 
-示例:
-  bash build.sh apt_changer
-  bash build.sh apt_changer --help
 EOF
 }
 
 list_available_scripts() {
   if ! compgen -G "${SCRIPTS_DIR}/*.sh" > /dev/null; then
-    printf '当前没有可用脚本：%s\n' "${SCRIPTS_DIR}" >&2
+    printf '❌ 当前没有可用脚本：%s\n' "${SCRIPTS_DIR}" >&2
     return
   fi
 
-  printf '可用脚本:\n' >&2
+  printf '✅ 可用脚本:\n' >&2
   for file in "${SCRIPTS_DIR}"/*.sh; do
     printf '  - %s\n' "$(basename "${file}" .sh)" >&2
   done
@@ -57,7 +55,7 @@ main() {
   fi
 
   bash "${script_path}" "$@"
-  print_success "${script_name}完成!"
+  print_success "✅ 完成 ${script_name}"
 }
 
 main "$@"
